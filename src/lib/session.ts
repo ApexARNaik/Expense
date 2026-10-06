@@ -2,22 +2,24 @@ import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 import prisma from './db'
 
-const secretKey = process.env.SESSION_SECRET
-if (!secretKey || secretKey.length < 32) {
-  throw new Error('SESSION_SECRET must be set in environment variables and be at least 32 characters long.')
+function getKey() {
+  const secretKey = process.env.SESSION_SECRET
+  if (!secretKey || secretKey.length < 32) {
+    throw new Error('SESSION_SECRET must be set in environment variables and be at least 32 characters long.')
+  }
+  return new TextEncoder().encode(secretKey)
 }
-const key = new TextEncoder().encode(secretKey)
 
 export async function encrypt(payload: any) {
   return await new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('30 d')
-    .sign(key)
+    .sign(getKey())
 }
 
 export async function decrypt(input: string): Promise<any> {
-  const { payload } = await jwtVerify(input, key, {
+  const { payload } = await jwtVerify(input, getKey(), {
     algorithms: ['HS256'],
   })
   return payload
