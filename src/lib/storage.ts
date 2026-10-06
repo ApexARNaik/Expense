@@ -39,24 +39,38 @@ export class LocalDiskStorage implements StorageProvider {
 export class VercelBlobStorage implements StorageProvider {
   async put(fileName: string, buffer: Buffer, mimeType: string): Promise<string> {
     const { put } = await import('@vercel/blob')
-    const { url } = await put(fileName, buffer, {
-      access: 'public',
+    await put(fileName, buffer, {
+      access: 'private',
       contentType: mimeType,
+      addRandomSuffix: false,
     })
-    return url
+    return fileName
   }
 
-  async getSignedOrAuthenticatedStream(url: string): Promise<Buffer> {
-    const res = await fetch(url)
-    if (!res.ok) throw new Error('Failed to fetch blob')
-    const arrayBuffer = await res.arrayBuffer()
-    return Buffer.from(arrayBuffer)
+  async getSignedOrAuthenticatedStream(filePathOrUrl: string): Promise<Buffer> {
+    const { get } = await import('@vercel/blob')
+    const result = await get(filePathOrUrl, {
+      access: 'private',
+    })
+    if (!result || !result.stream) {
+      const err: any = new Error('Blob not found')
+      err.code = 'ENOENT'
+      throw err
+    }
+    const reader = result.stream.getReader()
+    const chunks: Uint8Array[] = []
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (value) chunks.push(value)
+    }
+    return Buffer.concat(chunks)
   }
 
-  async delete(url: string): Promise<void> {
+  async delete(filePathOrUrl: string): Promise<void> {
     const { del } = await import('@vercel/blob')
     try {
-      await del(url)
+      await del(filePathOrUrl)
     } catch (e) {
       console.error('Failed to delete blob', e)
     }
