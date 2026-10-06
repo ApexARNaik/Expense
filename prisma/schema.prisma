@@ -1,0 +1,58 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL") // uses connection pooling
+  directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
+}
+
+model Member {
+  id              String         @id @default(uuid())
+  name            String         @unique
+  color           String
+
+  expensesPaid    Expense[]      @relation("ExpensePaidBy")
+  expensesCreated Expense[]      @relation("ExpenseCreatedBy")
+  expensesUpdated Expense[]      @relation("ExpenseUpdatedBy")
+  shares          ExpenseShare[]
+}
+
+model Expense {
+  id             String         @id @default(uuid())
+  title          String
+  amountPaise    Int
+  expenseDate    String         // YYYY-MM-DD
+  paidById       String
+  category       String?
+  note           String?
+  imageUrl       String?
+  createdById    String
+  createdAt      DateTime       @default(now())
+  updatedById    String?
+  updatedAt      DateTime       @updatedAt
+  deletedAt      DateTime?
+  idempotencyKey String?        @unique
+
+  paidBy         Member         @relation("ExpensePaidBy", fields: [paidById], references: [id])
+  createdBy      Member         @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
+  updatedBy      Member?        @relation("ExpenseUpdatedBy", fields: [updatedById], references: [id])
+  shares         ExpenseShare[]
+
+  @@index([expenseDate])
+  @@index([deletedAt])
+}
+
+model ExpenseShare {
+  expenseId   String
+  memberId    String
+  sharePaise  Int
+
+  expense     Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  member      Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([expenseId, memberId])
+}
