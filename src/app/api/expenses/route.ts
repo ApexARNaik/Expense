@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     const parsed = ExpenseSchema.safeParse(body)
     
     if (!parsed.success) {
-      return NextResponse.json({ error: 'Invalid input', details: parsed.error.errors }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid input', details: parsed.error.issues }, { status: 400 })
     }
     
     const data = parsed.data

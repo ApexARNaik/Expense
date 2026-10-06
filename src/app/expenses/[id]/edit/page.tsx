@@ -3,7 +3,7 @@ import prisma from '@/lib/db'
 import { requireMember } from '@/lib/session'
 import { notFound } from 'next/navigation'
 
-export default async function EditExpensePage({ params }: { params: { id: string } }) {
+export default async function EditExpensePage({ params }: { params: Promise<{ id: string }> }) {
   const currentMember = await requireMember()
   const { id } = await params
   

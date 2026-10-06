@@ -3,7 +3,7 @@ import path from 'path'
 
 export interface StorageProvider {
   put(fileName: string, buffer: Buffer, mimeType: string): Promise<string>;
-  getSignedOrAuthenticatedStream(filePath: string): Promise<ReadableStream | Buffer>;
+  getSignedOrAuthenticatedStream(filePath: string): Promise<Buffer>;
   delete(filePath: string): Promise<void>;
 }
 

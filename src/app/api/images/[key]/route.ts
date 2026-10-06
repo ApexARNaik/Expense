@@ -3,7 +3,7 @@ import { requireMember } from '@/lib/session'
 import { storage } from '@/lib/storage'
 import path from 'path'
 
-export async function GET(req: NextRequest, { params }: { params: { key: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ key: string }> }) {
   try {
     const currentMember = await requireMember()
     if (!currentMember) return new NextResponse('Unauthorized', { status: 401 })
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest, { params }: { params: { key: string 
 
     try {
       const buffer = await storage.getSignedOrAuthenticatedStream(decodedKey)
-      return new NextResponse(buffer, {
+      return new NextResponse(buffer as unknown as BodyInit, {
         headers: {
           'Content-Type': 'image/webp',
           'X-Content-Type-Options': 'nosniff',

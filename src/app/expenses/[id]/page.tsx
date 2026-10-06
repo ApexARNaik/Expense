@@ -10,7 +10,7 @@ function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 }
 
-export default async function ExpenseDetailPage({ params }: { params: { id: string } }) {
+export default async function ExpenseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await requireMember()
   const { id } = await params
 
@@ -72,7 +72,7 @@ export default async function ExpenseDetailPage({ params }: { params: { id: stri
             <h2 className="text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">Split Details</h2>
             <div className="space-y-3">
               {expense.shares.map(share => (
-                <div key={share.id} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                <div key={`${share.expenseId}-${share.memberId}`} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50">
                   <div className="flex items-center gap-3">
                     <div 
                       className="h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-sm"

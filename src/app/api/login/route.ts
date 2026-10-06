@@ -6,7 +6,8 @@ import { rateLimit } from '@/lib/rate-limit'
 import crypto from 'crypto'
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for') ?? req.ip ?? 'unknown'
+  const forwardedFor = req.headers.get('x-forwarded-for')
+  const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown'
   if (!rateLimit(ip, 10, 60000)) { // 10 requests per minute
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
   }

@@ -9,13 +9,7 @@ import { storage } from '@/lib/storage'
 import heicConvert from 'heic-convert'
 
 export const maxDuration = 60
-// Limit request body to 10MB
-export const config = {
-  api: {
-    bodyParser: false,
-    sizeLimit: '10mb'
-  }
-}
+
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,7 +24,7 @@ export async function POST(req: NextRequest) {
 
     // Basic rate limit
     const ip = req.headers.get('x-forwarded-for') || '127.0.0.1'
-    const allowed = await rateLimit(`upload_${ip}`)
+    const allowed = rateLimit(`upload_${ip}`, 10, 60000)
     if (!allowed) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
     }
