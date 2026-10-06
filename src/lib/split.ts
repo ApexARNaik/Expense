@@ -5,8 +5,10 @@ export function calculateShares(amountPaise: number, participants: Participant[]
     throw new Error('At least one participant is required')
   }
 
-  const baseShare = Math.floor(amountPaise / participants.length)
-  let remainder = amountPaise % participants.length
+  const isNegative = amountPaise < 0
+  const absAmount = Math.abs(amountPaise)
+  const baseShare = Math.floor(absAmount / participants.length)
+  let remainder = absAmount % participants.length
 
   // Sort alphabetically by name to ensure stable distribution of remainder
   const sorted = [...participants].sort((a, b) => a.name.localeCompare(b.name))
@@ -14,7 +16,9 @@ export function calculateShares(amountPaise: number, participants: Participant[]
   const shares: Record<string, number> = {}
 
   for (const p of sorted) {
-    shares[p.id] = baseShare + (remainder > 0 ? 1 : 0)
+    const extra = remainder > 0 ? 1 : 0
+    const share = (baseShare + extra) * (isNegative ? -1 : 1)
+    shares[p.id] = share
     if (remainder > 0) {
       remainder--
     }

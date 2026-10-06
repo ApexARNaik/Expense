@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { v4 as uuidv4 } from 'uuid'
 import { parseAmountToPaise, formatPaiseToAmount } from '@/lib/money'
@@ -19,15 +19,20 @@ type ExpenseData = {
   imageUrl?: string | null
 }
 
-const CATEGORIES = ['Rent', 'Utilities', 'Groceries', 'Food and Dining', 'Household', 'Internet', 'Furniture', 'Other']
+const EXPENSE_CATEGORIES = ['Groceries', 'Food and Dining', 'Rent', 'Utilities', 'Household', 'Internet', 'Furniture', 'Other']
+const INCOME_CATEGORIES = ['Guest Food / Meals', 'Guest Reimbursement', 'Refund / Credit', 'Other']
 
 export default function ExpenseForm({ initialData, members, currentMemberId }: { initialData?: ExpenseData, members: Member[], currentMemberId: string }) {
   const router = useRouter()
+  
+  const isInitialIncome = initialData ? initialData.amountPaise < 0 : false
+  const [mode, setMode] = useState<'expense' | 'income'>(isInitialIncome ? 'income' : 'expense')
+
   const [title, setTitle] = useState(initialData?.title || '')
-  const [amountInput, setAmountInput] = useState(initialData ? formatPaiseToAmount(initialData.amountPaise) : '')
+  const [amountInput, setAmountInput] = useState(initialData ? formatPaiseToAmount(Math.abs(initialData.amountPaise)) : '')
   const [date, setDate] = useState(initialData?.expenseDate || new Date().toISOString().split('T')[0])
   const [paidById, setPaidById] = useState(initialData?.paidById || currentMemberId)
-  const [category, setCategory] = useState(initialData?.category || '')
+  const [category, setCategory] = useState(initialData?.category || (isInitialIncome ? 'Guest Food / Meals' : ''))
   const [note, setNote] = useState(initialData?.note || '')
   const [imageUrl, setImageUrl] = useState(initialData?.imageUrl || null)
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -45,6 +50,16 @@ export default function ExpenseForm({ initialData, members, currentMemberId }: {
   const [idempotencyKey] = useState(initialData?.idempotencyKey || uuidv4())
 
   const isAll = selectedIds.size === members.length
+  const isIncome = mode === 'income'
+
+  const handleModeChange = (newMode: 'expense' | 'income') => {
+    setMode(newMode)
+    if (newMode === 'income' && (!category || EXPENSE_CATEGORIES.includes(category))) {
+      setCategory('Guest Food / Meals')
+    } else if (newMode === 'expense' && (category === 'Guest Food / Meals' || category === 'Guest Reimbursement')) {
+      setCategory('Groceries')
+    }
+  }
 
   const handleToggleMember = (id: string) => {
     const next = new Set(selectedIds)
@@ -77,19 +92,19 @@ export default function ExpenseForm({ initialData, members, currentMemberId }: {
     setAmountInput(prev => prev + key)
   }
 
-  const amountPaise = parseAmountToPaise(amountInput)
-  const participantCount = selectedIds.size || 1 // Avoid divide by zero in preview
-  const previewShare = amountPaise > 0 && selectedIds.size > 0 
-    ? formatPaiseToAmount(Math.floor(amountPaise / selectedIds.size)) // approx
+  const rawPaise = parseAmountToPaise(amountInput)
+  const finalAmountPaise = isIncome ? -rawPaise : rawPaise
+  const previewShare = rawPaise > 0 && selectedIds.size > 0 
+    ? formatPaiseToAmount(Math.floor(rawPaise / selectedIds.size)) // approx
     : '0.00'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (selectedIds.size === 0) {
-      setError('Select at least one person to split with')
+      setError(isIncome ? 'Select at least one flatmate to credit' : 'Select at least one person to split with')
       return
     }
-    if (amountPaise <= 0) {
+    if (rawPaise <= 0) {
       setError('Amount must be greater than 0')
       return
     }
@@ -131,12 +146,12 @@ export default function ExpenseForm({ initialData, members, currentMemberId }: {
     }
 
     const payload = {
-      title,
-      amountPaise,
+      title: title.trim(),
+      amountPaise: finalAmountPaise,
       expenseDate: date,
       paidById,
-      category,
-      note,
+      category: category || (isIncome ? 'Guest Food / Meals' : 'Other'),
+      note: note.trim() || undefined,
       imageUrl: finalImageUrl,
       participantIds: Array.from(selectedIds),
       idempotencyKey: initialData ? undefined : idempotencyKey
@@ -163,23 +178,69 @@ export default function ExpenseForm({ initialData, members, currentMemberId }: {
     }
   }
 
+  const categories = isIncome ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-lg mx-auto bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm">
+    <form onSubmit={handleSubmit} className="space-y-6 max-w-lg mx-auto bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700/60 transition-colors">
       {error && <div className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm">{error}</div>}
       
+      {/* Mode Switcher: Expense vs Money Received */}
+      <div className="grid grid-cols-2 p-1 bg-gray-100 dark:bg-gray-700/80 rounded-xl gap-1">
+        <button
+          type="button"
+          onClick={() => handleModeChange('expense')}
+          className={`py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+            !isIncome
+              ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+          }`}
+        >
+          <span>💸</span>
+          <span>Expense</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => handleModeChange('income')}
+          className={`py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+            isIncome
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+          }`}
+        >
+          <span>💵</span>
+          <span>Money Received</span>
+        </button>
+      </div>
+
+      {/* Mode helper description */}
+      {isIncome && (
+        <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 p-3 rounded-xl text-xs text-emerald-800 dark:text-emerald-300 flex items-start gap-2">
+          <span className="text-base">ℹ️</span>
+          <span>
+            Record payments received from guests/friends for food or stays. This reduces house food expenses and credits each flatmate's balance.
+          </span>
+        </div>
+      )}
+
       {/* Amount Display */}
-      <div className="text-center">
-        <div className="text-5xl font-light text-gray-900 dark:text-gray-100 tracking-tight">
-          ₹ {amountInput || '0'}
+      <div className="text-center py-2">
+        <div className={`text-5xl font-light tracking-tight transition-colors ${
+          isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-gray-100'
+        }`}>
+          {isIncome ? '+₹ ' : '₹ '}{amountInput || '0'}
         </div>
         <div className="text-sm text-gray-500 dark:text-gray-400 mt-2 font-medium">
-          {selectedIds.size > 0 ? `₹${previewShare} each` : 'Select participants'}
+          {selectedIds.size > 0 
+            ? isIncome ? `+₹${previewShare} credit each` : `₹${previewShare} each` 
+            : isIncome ? 'Select flatmates to credit' : 'Select participants'}
         </div>
       </div>
 
-      {/* Receipt Image Upload */}
+      {/* Receipt / Screenshot Image Upload */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Receipt Image (Optional)</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          {isIncome ? 'Payment Screenshot (Optional)' : 'Receipt Image (Optional)'}
+        </label>
         
         {uploadError && <div className="text-red-500 text-xs">{uploadError}</div>}
         
@@ -224,13 +285,15 @@ export default function ExpenseForm({ initialData, members, currentMemberId }: {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          {isIncome ? 'Description / Guest Name' : 'Title'}
+        </label>
         <input 
           type="text" 
           value={title} 
           onChange={(e) => setTitle(e.target.value)} 
-          placeholder="What was it for?"
-          className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg p-3"
+          placeholder={isIncome ? "e.g. Rahul lunch payment, Weekend guests dinner" : "What was it for?"}
+          className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 transition-colors"
         />
       </div>
 
@@ -245,7 +308,9 @@ export default function ExpenseForm({ initialData, members, currentMemberId }: {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Paid By</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {isIncome ? 'Received By' : 'Paid By'}
+          </label>
           <select 
             value={paidById} 
             onChange={(e) => setPaidById(e.target.value)}
@@ -259,7 +324,22 @@ export default function ExpenseForm({ initialData, members, currentMemberId }: {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Split Between</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+        <select 
+          value={category} 
+          onChange={(e) => setCategory(e.target.value)}
+          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+        >
+          {categories.map(c => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          {isIncome ? 'Share Credit With' : 'Split Between'}
+        </label>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -268,7 +348,7 @@ export default function ExpenseForm({ initialData, members, currentMemberId }: {
               isAll ? 'bg-gray-800 text-white dark:bg-gray-100 dark:text-gray-900' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
             }`}
           >
-            All
+            All Flatmates
           </button>
           {members.map(m => (
             <button
@@ -276,13 +356,27 @@ export default function ExpenseForm({ initialData, members, currentMemberId }: {
               type="button"
               onClick={() => handleToggleMember(m.id)}
               className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
-                selectedIds.has(m.id) && !isAll ? 'bg-blue-600 text-white dark:bg-blue-500' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                selectedIds.has(m.id) && !isAll 
+                  ? (isIncome ? 'bg-emerald-600 text-white dark:bg-emerald-500' : 'bg-blue-600 text-white dark:bg-blue-500')
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
               }`}
             >
               {m.name}
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Note field */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Note (Optional)</label>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Any extra details..."
+          rows={2}
+          className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg p-3 text-sm"
+        />
       </div>
 
       {/* Basic Keypad for mobile-first feeling */}
@@ -309,9 +403,13 @@ export default function ExpenseForm({ initialData, members, currentMemberId }: {
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold py-4 rounded-xl transition-colors active:scale-95 disabled:opacity-50 mt-4"
+        className={`w-full text-white text-lg font-semibold py-4 rounded-xl transition-all active:scale-95 disabled:opacity-50 mt-4 shadow-md ${
+          isIncome 
+            ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30' 
+            : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/30'
+        }`}
       >
-        {loading ? 'Saving...' : 'Save Expense'}
+        {loading ? 'Saving...' : isIncome ? 'Record Money Received' : 'Save Expense'}
       </button>
     </form>
   )

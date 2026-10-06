@@ -86,7 +86,7 @@ export default function Dashboard({ initialMembers }: { initialMembers: Member[]
     <div className="space-y-6 pb-20 relative">
       
       {/* Period Selector */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 flex gap-2 overflow-x-auto snap-x no-scrollbar">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 flex gap-2 overflow-x-auto snap-x no-scrollbar border border-gray-100 dark:border-gray-700/60">
         {['this_month', 'last_month', 'all_time'].map(p => (
           <button 
             key={p}
@@ -112,18 +112,18 @@ export default function Dashboard({ initialMembers }: { initialMembers: Member[]
 
       {loading ? (
         <div className="animate-pulse space-y-6">
-          <div className="h-32 bg-gray-200 rounded-3xl"></div>
+          <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-3xl"></div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="h-24 bg-gray-200 rounded-2xl"></div>
-            <div className="h-24 bg-gray-200 rounded-2xl"></div>
-            <div className="h-24 bg-gray-200 rounded-2xl"></div>
+            <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded-2xl"></div>
+            <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded-2xl"></div>
+            <div className="h-24 bg-gray-200 dark:bg-gray-700 rounded-2xl"></div>
           </div>
         </div>
       ) : summary ? (
         <>
           {/* Total Spend */}
-          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm p-6 text-center">
-            <h2 className="text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Total House Spend</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm p-6 text-center border border-gray-100 dark:border-gray-700/60">
+            <h2 className="text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">Total Net House Spend</h2>
             <div className="text-4xl font-light text-gray-900 dark:text-gray-100 tracking-tight">
               {formatPaiseToIndianRupees(summary.totalHouseSpendPaise)}
             </div>
@@ -143,7 +143,7 @@ export default function Dashboard({ initialMembers }: { initialMembers: Member[]
                 <div 
                   key={member.id} 
                   onClick={() => setExpandedCard(isExpanded ? null : member.id)}
-                  className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5 cursor-pointer transition-all border-l-4 overflow-hidden`}
+                  className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5 cursor-pointer transition-all border-l-4 overflow-hidden border border-gray-100 dark:border-gray-700/60`}
                   style={{ borderLeftColor: member.color }}
                 >
                   <div className="flex justify-between items-center">
@@ -156,12 +156,12 @@ export default function Dashboard({ initialMembers }: { initialMembers: Member[]
                   {stats && (
                     <div className="mt-2 flex gap-4 text-xs font-medium uppercase tracking-wide">
                       <div className="flex flex-col">
-                        <span className="text-gray-400 dark:text-gray-500">Paid</span>
+                        <span className="text-gray-400 dark:text-gray-500">Paid/Recv Net</span>
                         <span className="text-gray-900 dark:text-gray-100">{formatPaiseToIndianRupees(stats.totalPaidPaise)}</span>
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-gray-400 dark:text-gray-500">Net</span>
-                        <span className={stats.netBalancePaise > 0 ? 'text-green-600 dark:text-green-500' : stats.netBalancePaise < 0 ? 'text-red-600 dark:text-red-500' : 'text-gray-900 dark:text-gray-100'}>
+                        <span className="text-gray-400 dark:text-gray-500">Net Balance</span>
+                        <span className={stats.netBalancePaise > 0 ? 'text-green-600 dark:text-green-500 font-bold' : stats.netBalancePaise < 0 ? 'text-red-600 dark:text-red-500 font-bold' : 'text-gray-900 dark:text-gray-100'}>
                           {stats.netBalancePaise > 0 ? '+' : ''}{formatPaiseToIndianRupees(stats.netBalancePaise)}
                         </span>
                       </div>
@@ -198,7 +198,7 @@ export default function Dashboard({ initialMembers }: { initialMembers: Member[]
             }))
             const settlements = calculateSettlements(balances)
             return (
-              <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm p-6">
+              <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm p-6 border border-gray-100 dark:border-gray-700/60">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Settle up</h2>
                 {settlements.length === 0 ? (
                   <p className="text-gray-500 dark:text-gray-400 text-sm">All settled for this period!</p>
@@ -225,7 +225,7 @@ export default function Dashboard({ initialMembers }: { initialMembers: Member[]
       )}
 
       {/* Recent Expenses Preview */}
-      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm p-6 border border-gray-100 dark:border-gray-700/60">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Recent</h2>
           <Link href="/expenses" className="text-blue-600 font-medium text-sm hover:underline">
@@ -234,22 +234,36 @@ export default function Dashboard({ initialMembers }: { initialMembers: Member[]
         </div>
         
         {recent.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400 text-sm">No expenses yet.</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">No transactions yet.</p>
         ) : (
           <div className="space-y-4">
-            {recent.map(expense => (
-              <Link key={expense.id} href={`/expenses/${expense.id}`} className="block group">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-medium text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{expense.title}</h3>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Paid by {expense.paidBy.name}</div>
+            {recent.map(expense => {
+              const isIncome = expense.amountPaise < 0
+              return (
+                <Link key={expense.id} href={`/expenses/${expense.id}`} className="block group">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{expense.title}</h3>
+                        {isIncome && (
+                          <span className="text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded">
+                            + Received
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {isIncome ? `Received by ${expense.paidBy.name}` : `Paid by ${expense.paidBy.name}`}
+                      </div>
+                    </div>
+                    <div className={`font-semibold ${
+                      isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-gray-100'
+                    }`}>
+                      {isIncome ? `+${formatPaiseToIndianRupees(Math.abs(expense.amountPaise))}` : formatPaiseToIndianRupees(expense.amountPaise)}
+                    </div>
                   </div>
-                  <div className="font-semibold text-gray-900 dark:text-gray-100">
-                    {formatPaiseToIndianRupees(expense.amountPaise)}
-                  </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              )
+            })}
           </div>
         )}
       </div>
