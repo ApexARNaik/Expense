@@ -44,7 +44,11 @@ export async function GET(req: NextRequest) {
     const totalMembers = members.length
 
     for (const expense of expenses) {
-      totalHouseSpendPaise += expense.amountPaise
+      const isSettlement = expense.category === 'Settlement' || expense.category === 'Debt Payment'
+      
+      if (!isSettlement) {
+        totalHouseSpendPaise += expense.amountPaise
+      }
       
       const participantCount = expense.shares.length
       const bucketName = participantCount === totalMembers ? 'sharedWithEveryone' :
@@ -53,7 +57,9 @@ export async function GET(req: NextRequest) {
       for (const share of expense.shares) {
         if (memberStats[share.memberId]) {
           memberStats[share.memberId].totalPaise += share.sharePaise
-          memberStats[share.memberId].buckets[bucketName] += share.sharePaise
+          if (!isSettlement) {
+            memberStats[share.memberId].buckets[bucketName] += share.sharePaise
+          }
         }
       }
       

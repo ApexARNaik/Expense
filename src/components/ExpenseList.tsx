@@ -98,7 +98,7 @@ export default function ExpenseList({ members }: { members: Member[] }) {
   return (
     <div className="space-y-4 pb-12">
       {/* Filter Bar */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 space-y-3">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-4 space-y-3 border border-gray-100 dark:border-gray-700/60">
         <div className="flex flex-wrap gap-2 items-center">
           <input
             type="text"
@@ -124,7 +124,7 @@ export default function ExpenseList({ members }: { members: Member[] }) {
             onChange={e => setPaidBy(e.target.value)}
             className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm border-transparent focus:bg-white dark:focus:bg-gray-600 focus:border-blue-500 transition-colors text-gray-900 dark:text-gray-100"
           >
-            <option value="">Any Payer / Receiver</option>
+            <option value="">Any Payer / Sender</option>
             {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
 
@@ -133,8 +133,24 @@ export default function ExpenseList({ members }: { members: Member[] }) {
             onChange={e => setParticipant(e.target.value)}
             className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm border-transparent focus:bg-white dark:focus:bg-gray-600 focus:border-blue-500 transition-colors text-gray-900 dark:text-gray-100"
           >
-            <option value="">Any Participant</option>
+            <option value="">Any Participant / Receiver</option>
             {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+
+          <select 
+            value={category} 
+            onChange={e => setCategory(e.target.value)}
+            className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm border-transparent focus:bg-white dark:focus:bg-gray-600 focus:border-blue-500 transition-colors text-gray-900 dark:text-gray-100"
+          >
+            <option value="">All Categories</option>
+            <option value="Settlement">Settlements</option>
+            <option value="Guest Food / Meals">Guest Food / Meals</option>
+            <option value="Groceries">Groceries</option>
+            <option value="Food and Dining">Food and Dining</option>
+            <option value="Rent">Rent</option>
+            <option value="Utilities">Utilities</option>
+            <option value="Household">Household</option>
+            <option value="Other">Other</option>
           </select>
 
           {hasFilters && (
@@ -146,7 +162,7 @@ export default function ExpenseList({ members }: { members: Member[] }) {
       </div>
 
       {/* List */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden divide-y divide-gray-100 dark:divide-gray-700">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden divide-y divide-gray-100 dark:divide-gray-700 border border-gray-100 dark:border-gray-700/60">
         {loading && expenses.length === 0 ? (
           <div className="p-8 text-center text-gray-400 dark:text-gray-500 animate-pulse">Loading items...</div>
         ) : expenses.length === 0 ? (
@@ -162,29 +178,42 @@ export default function ExpenseList({ members }: { members: Member[] }) {
         ) : (
           expenses.map(expense => {
             const isIncome = expense.amountPaise < 0
+            const isSettle = expense.category === 'Settlement' || expense.category === 'Debt Payment'
+            const receiverMember = expense.shares?.[0]?.member
+
             return (
               <Link key={expense.id} href={`/expenses/${expense.id}`} className="block p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 active:bg-gray-100 dark:active:bg-gray-700 transition-colors">
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="font-medium text-gray-900 dark:text-gray-100">{expense.title}</h3>
-                      {isIncome && (
+                      {isSettle ? (
+                        <span className="text-[10px] font-semibold bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded">
+                          🤝 Settlement
+                        </span>
+                      ) : isIncome ? (
                         <span className="text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded">
                           + Received
                         </span>
-                      )}
+                      ) : null}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
                       <span>{new Date(expense.expenseDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                       <span>•</span>
-                      <span>{isIncome ? `Received by ${expense.paidBy.name}` : `Paid by ${expense.paidBy.name}`}</span>
+                      <span>
+                        {isSettle 
+                          ? `${expense.paidBy.name} paid ${receiverMember?.name || 'flatmate'}`
+                          : isIncome 
+                            ? `Received by ${expense.paidBy.name}` 
+                            : `Paid by ${expense.paidBy.name}`}
+                      </span>
                     </div>
                     <div className="flex -space-x-1.5 mt-2">
                       {expense.shares.map((share: any) => (
                         <div 
                           key={share.memberId} 
                           title={share.member.name}
-                          className="h-5 w-5 rounded-full ring-2 ring-white dark:ring-gray-800 text-[10px] flex items-center justify-center text-white"
+                          className="h-5 w-5 rounded-full ring-2 ring-white dark:ring-gray-800 text-[10px] flex items-center justify-center text-white font-semibold"
                           style={{ backgroundColor: share.member.color }}
                         >
                           {share.member.name.charAt(0)}
@@ -194,13 +223,17 @@ export default function ExpenseList({ members }: { members: Member[] }) {
                   </div>
                   <div className="text-right">
                     <div className={`font-semibold ${
-                      isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-gray-100'
+                      isSettle
+                        ? 'text-indigo-600 dark:text-indigo-400'
+                        : isIncome 
+                          ? 'text-emerald-600 dark:text-emerald-400' 
+                          : 'text-gray-900 dark:text-gray-100'
                     }`}>
                       {isIncome ? `+${formatPaiseToIndianRupees(Math.abs(expense.amountPaise))}` : formatPaiseToIndianRupees(expense.amountPaise)}
                     </div>
                     {expense.imageUrl && (
                       <span className="text-[10px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded mt-1 inline-block">
-                        {isIncome ? 'Screenshot' : 'Receipt'}
+                        {isSettle ? 'Payment Proof' : isIncome ? 'Screenshot' : 'Receipt'}
                       </span>
                     )}
                   </div>

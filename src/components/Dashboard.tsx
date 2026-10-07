@@ -31,6 +31,7 @@ type ExpenseInfo = {
   title: string
   amountPaise: number
   expenseDate: string
+  category?: string | null
   paidBy: { name: string }
   shares: { member: { name: string, color: string } }[]
 }
@@ -199,19 +200,40 @@ export default function Dashboard({ initialMembers }: { initialMembers: Member[]
             const settlements = calculateSettlements(balances)
             return (
               <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm p-6 border border-gray-100 dark:border-gray-700/60">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Settle up</h2>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Settle up</h2>
+                  <Link 
+                    href="/expenses/new?mode=settle" 
+                    className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+                  >
+                    + Record Transfer
+                  </Link>
+                </div>
+                
                 {settlements.length === 0 ? (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">All settled for this period!</p>
+                  <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-2xl text-center">
+                    <span className="text-2xl">🎉</span>
+                    <p className="text-emerald-800 dark:text-emerald-300 font-medium text-sm mt-1">All settled for this period!</p>
+                  </div>
                 ) : (
                   <div className="space-y-3">
                     {settlements.map((s, i) => (
-                      <div key={i} className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                      <div key={i} className="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 p-3.5 rounded-xl border border-gray-100 dark:border-gray-700">
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                           <span className="font-semibold text-gray-900 dark:text-gray-100">{s.fromName}</span> pays <span className="font-semibold text-gray-900 dark:text-gray-100">{s.toName}</span>
                         </span>
-                        <span className="font-bold text-gray-900 dark:text-gray-100">
-                          {formatPaiseToIndianRupees(s.amountPaise)}
-                        </span>
+                        <div className="flex items-center gap-3">
+                          <span className="font-bold text-gray-900 dark:text-gray-100">
+                            {formatPaiseToIndianRupees(s.amountPaise)}
+                          </span>
+                          <Link
+                            href={`/expenses/new?mode=settle&payer=${s.fromId}&receiver=${s.toId}&amount=${(s.amountPaise / 100).toFixed(2)}`}
+                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1"
+                          >
+                            <span>🤝</span>
+                            <span>Settle</span>
+                          </Link>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -239,24 +261,39 @@ export default function Dashboard({ initialMembers }: { initialMembers: Member[]
           <div className="space-y-4">
             {recent.map(expense => {
               const isIncome = expense.amountPaise < 0
+              const isSettle = expense.category === 'Settlement' || expense.category === 'Debt Payment'
+              const receiverMember = expense.shares?.[0]?.member
+
               return (
                 <Link key={expense.id} href={`/expenses/${expense.id}`} className="block group">
                   <div className="flex justify-between items-center">
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="font-medium text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{expense.title}</h3>
-                        {isIncome && (
+                        {isSettle ? (
+                          <span className="text-[10px] font-semibold bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded">
+                            🤝 Settlement
+                          </span>
+                        ) : isIncome ? (
                           <span className="text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded">
                             + Received
                           </span>
-                        )}
+                        ) : null}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {isIncome ? `Received by ${expense.paidBy.name}` : `Paid by ${expense.paidBy.name}`}
+                        {isSettle 
+                          ? `${expense.paidBy.name} paid ${receiverMember?.name || 'flatmate'}`
+                          : isIncome 
+                            ? `Received by ${expense.paidBy.name}` 
+                            : `Paid by ${expense.paidBy.name}`}
                       </div>
                     </div>
                     <div className={`font-semibold ${
-                      isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-gray-100'
+                      isSettle
+                        ? 'text-indigo-600 dark:text-indigo-400'
+                        : isIncome 
+                          ? 'text-emerald-600 dark:text-emerald-400' 
+                          : 'text-gray-900 dark:text-gray-100'
                     }`}>
                       {isIncome ? `+${formatPaiseToIndianRupees(Math.abs(expense.amountPaise))}` : formatPaiseToIndianRupees(expense.amountPaise)}
                     </div>

@@ -32,7 +32,9 @@ export default async function ExpenseDetailPage({ params }: { params: Promise<{ 
   }
 
   const isIncome = expense.amountPaise < 0
+  const isSettle = expense.category === 'Settlement' || expense.category === 'Debt Payment'
   const absAmount = Math.abs(expense.amountPaise)
+  const receiverMember = expense.shares?.[0]?.member
 
   return (
     <main className="p-4">
@@ -52,14 +54,23 @@ export default async function ExpenseDetailPage({ params }: { params: Promise<{ 
 
         <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm p-6 space-y-6 border border-gray-100 dark:border-gray-700/60">
           <div className="text-center pb-6 border-b border-gray-100 dark:border-gray-700">
-            {isIncome && (
+            {isSettle ? (
+              <div className="mb-3 inline-block px-3 py-1 bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-semibold">
+                🤝 Debt Settlement / Transfer
+              </div>
+            ) : isIncome ? (
               <div className="mb-3 inline-block px-3 py-1 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded-full text-xs font-semibold">
                 💵 Money Received / Guest Payment
               </div>
-            )}
+            ) : null}
+
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">{expense.title}</h1>
             <div className={`text-4xl font-light tracking-tight mb-4 ${
-              isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-gray-100'
+              isSettle 
+                ? 'text-indigo-600 dark:text-indigo-400' 
+                : isIncome 
+                  ? 'text-emerald-600 dark:text-emerald-400' 
+                  : 'text-gray-900 dark:text-gray-100'
             }`}>
               {isIncome ? '+₹' : '₹'}{(absAmount / 100).toFixed(2)}
             </div>
@@ -67,8 +78,19 @@ export default async function ExpenseDetailPage({ params }: { params: Promise<{ 
               <span>{formatDate(expense.expenseDate)}</span>
               <span>•</span>
               <span>
-                {isIncome ? 'Received by ' : 'Paid by '}
-                <strong className="text-gray-700 dark:text-gray-300">{expense.paidBy.name}</strong>
+                {isSettle ? (
+                  <>
+                    <strong className="text-gray-700 dark:text-gray-300">{expense.paidBy.name}</strong> paid <strong className="text-gray-700 dark:text-gray-300">{receiverMember?.name || 'flatmate'}</strong>
+                  </>
+                ) : isIncome ? (
+                  <>
+                    Received by <strong className="text-gray-700 dark:text-gray-300">{expense.paidBy.name}</strong>
+                  </>
+                ) : (
+                  <>
+                    Paid by <strong className="text-gray-700 dark:text-gray-300">{expense.paidBy.name}</strong>
+                  </>
+                )}
               </span>
             </div>
             {expense.category && (
@@ -83,7 +105,7 @@ export default async function ExpenseDetailPage({ params }: { params: Promise<{ 
 
           <div>
             <h2 className="text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-4">
-              {isIncome ? 'Credit Distribution' : 'Split Details'}
+              {isSettle ? 'Settlement Details' : isIncome ? 'Credit Distribution' : 'Split Details'}
             </h2>
             <div className="space-y-3">
               {expense.shares.map(share => {
@@ -97,12 +119,19 @@ export default async function ExpenseDetailPage({ params }: { params: Promise<{ 
                       >
                         {share.member.name.charAt(0)}
                       </div>
-                      <span className="font-medium text-gray-800 dark:text-gray-200">{share.member.name}</span>
+                      <div>
+                        <span className="font-medium text-gray-800 dark:text-gray-200">{share.member.name}</span>
+                        {isSettle && <span className="text-xs text-gray-400 dark:text-gray-500 block">Received payment</span>}
+                      </div>
                     </div>
                     <div className={`font-semibold ${
-                      isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-gray-100'
+                      isSettle
+                        ? 'text-indigo-600 dark:text-indigo-400'
+                        : isIncome 
+                          ? 'text-emerald-600 dark:text-emerald-400' 
+                          : 'text-gray-900 dark:text-gray-100'
                     }`}>
-                      {isIncome ? '+₹' : '₹'}{(absShare / 100).toFixed(2)} {isIncome && <span className="text-xs font-normal text-gray-500 dark:text-gray-400">(credit)</span>}
+                      {isIncome ? '+₹' : '₹'}{(absShare / 100).toFixed(2)} {isIncome ? <span className="text-xs font-normal text-gray-500 dark:text-gray-400">(credit)</span> : isSettle ? <span className="text-xs font-normal text-gray-500 dark:text-gray-400">(cleared)</span> : null}
                     </div>
                   </div>
                 )

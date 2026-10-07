@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import ExpenseForm from '@/components/ExpenseForm'
 import prisma from '@/lib/db'
 import { requireMember } from '@/lib/session'
@@ -36,15 +37,17 @@ export default async function EditExpensePage({ params }: { params: Promise<{ id
     <main className="p-4">
       <div className="max-w-4xl mx-auto space-y-6">
         <header className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Edit Expense</h1>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Edit Transaction</h1>
           <a href={`/expenses/${id}`} className="text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">Cancel</a>
         </header>
 
-        <ExpenseForm 
-          initialData={initialData}
-          members={members} 
-          currentMemberId={currentMember.id} 
-        />
+        <Suspense fallback={<div className="p-8 text-center text-gray-400 animate-pulse">Loading form...</div>}>
+          <ExpenseForm 
+            initialData={initialData}
+            members={members} 
+            currentMemberId={currentMember.id} 
+          />
+        </Suspense>
       </div>
     </main>
   )
