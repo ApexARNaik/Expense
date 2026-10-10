@@ -18,6 +18,7 @@ model Member {
   expensesCreated Expense[]      @relation("ExpenseCreatedBy")
   expensesUpdated Expense[]      @relation("ExpenseUpdatedBy")
   shares          ExpenseShare[]
+  activityLogs    ActivityLog[]
 }
 
 model Expense {
@@ -41,6 +42,14 @@ model Expense {
   updatedBy      Member?        @relation("ExpenseUpdatedBy", fields: [updatedById], references: [id])
   shares         ExpenseShare[]
 
+  // Recurring expense fields
+  isRecurring        Boolean   @default(false)
+  recurrenceStatus   String?   // "ACTIVE", "STOPPED"
+  nextRecurrenceDate String?   // "YYYY-MM-DD"
+  parentRecurringId  String?
+  parentTemplate     Expense?  @relation("RecurringExpenses", fields: [parentRecurringId], references: [id])
+  recurringInstances Expense[] @relation("RecurringExpenses")
+
   @@index([expenseDate])
   @@index([deletedAt])
 }
@@ -54,4 +63,16 @@ model ExpenseShare {
   member      Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@id([expenseId, memberId])
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  action    String
+  details   String?
+  memberId  String
+  createdAt DateTime @default(now())
+
+  member    Member   @relation(fields: [memberId], references: [id])
+
+  @@index([createdAt(sort: Desc)])
 }

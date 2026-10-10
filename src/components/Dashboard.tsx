@@ -63,6 +63,9 @@ export default function Dashboard({ initialMembers }: { initialMembers: Member[]
           fetch(`/api/expenses`) // for recent expenses
         ])
         
+        // Trigger recurring expenses processing in the background
+        fetch('/api/cron/process-recurring').catch(console.error)
+        
         if (summaryRes.ok) {
           const data = await summaryRes.json()
           setSummary(data)

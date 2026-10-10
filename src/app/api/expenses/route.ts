@@ -5,6 +5,7 @@ import { ExpenseSchema } from '@/lib/schemas'
 import { calculateShares } from '@/lib/split'
 import { storage } from '@/lib/storage'
 import { rateLimit } from '@/lib/rate-limit'
+import { addMonths } from '@/lib/date'
 
 export async function POST(req: NextRequest) {
   let reqIdempotencyKey: string | undefined
@@ -80,6 +81,9 @@ export async function POST(req: NextRequest) {
           note: data.note,
           imageUrl: data.imageUrl,
           idempotencyKey: data.idempotencyKey,
+          isRecurring: data.isRecurring || false,
+          recurrenceStatus: data.isRecurring ? 'ACTIVE' : null,
+          nextRecurrenceDate: data.isRecurring ? addMonths(data.expenseDate, 1) : null,
           paidBy: { connect: { id: data.paidById } },
           createdBy: { connect: { id: currentMember.id } },
           shares: {
@@ -93,6 +97,14 @@ export async function POST(req: NextRequest) {
           shares: true,
           paidBy: true,
           createdBy: true
+        }
+      })
+      
+      await tx.activityLog.create({
+        data: {
+          action: 'CREATE_EXPENSE',
+          details: JSON.stringify({ title: data.title, amountPaise: data.amountPaise }),
+          memberId: currentMember.id
         }
       })
       

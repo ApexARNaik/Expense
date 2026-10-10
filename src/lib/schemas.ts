@@ -16,5 +16,6 @@ export const ExpenseSchema = z.object({
   participantIds: z.array(z.string()).min(1, 'At least one participant is required').refine(
     (ids) => new Set(ids).size === ids.length,
     { message: 'Duplicate participants are not allowed' }
-  )
+  ),
+  isRecurring: z.boolean().optional()
 })

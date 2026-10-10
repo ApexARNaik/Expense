@@ -5,6 +5,7 @@ import Link from 'next/link'
 import DeleteExpenseButton from '@/components/DeleteExpenseButton'
 import ReceiptViewer from '@/components/ReceiptViewer'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { revalidatePath } from 'next/cache'
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
@@ -13,6 +14,15 @@ function formatDate(dateStr: string) {
 export default async function ExpenseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await requireMember()
   const { id } = await params
+
+  async function stopRecurringAction() {
+    'use server'
+    await prisma.expense.update({
+      where: { id },
+      data: { recurrenceStatus: 'STOPPED' }
+    })
+    revalidatePath(`/expenses/${id}`)
+  }
 
   const expense = await prisma.expense.findUnique({
     where: { id },
@@ -63,6 +73,21 @@ export default async function ExpenseDetailPage({ params }: { params: Promise<{ 
                 💵 Money Received / Guest Payment
               </div>
             ) : null}
+
+            {expense.isRecurring && (
+              <div className="mb-3 flex justify-center items-center gap-2">
+                <div className="inline-block px-3 py-1 bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 rounded-full text-xs font-semibold">
+                  🔄 Monthly Recurring ({expense.recurrenceStatus})
+                </div>
+                {expense.recurrenceStatus === 'ACTIVE' && (
+                  <form action={stopRecurringAction}>
+                    <button type="submit" className="text-xs font-medium text-red-600 hover:text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900 rounded-full px-3 py-1 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">
+                      Stop
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
 
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">{expense.title}</h1>
             <div className={`text-4xl font-light tracking-tight mb-4 ${

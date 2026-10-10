@@ -130,6 +130,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         throw new Error('Transaction aborted: Shares sum does not match amount')
       }
       
+      await tx.activityLog.create({
+        data: {
+          action: 'UPDATE_EXPENSE',
+          details: JSON.stringify({ title: data.title, amountPaise: data.amountPaise, id }),
+          memberId: currentMember.id
+        }
+      })
+      
       return expense
     })
 
@@ -164,12 +172,21 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
-    await prisma.expense.update({
-      where: { id },
-      data: {
-        deletedAt: new Date(),
-        updatedById: currentMember.id
-      }
+    await prisma.$transaction(async (tx) => {
+      await tx.expense.update({
+        where: { id },
+        data: {
+          deletedAt: new Date(),
+          updatedById: currentMember.id
+        }
+      })
+      await tx.activityLog.create({
+        data: {
+          action: 'DELETE_EXPENSE',
+          details: JSON.stringify({ title: existing.title, amountPaise: existing.amountPaise, id }),
+          memberId: currentMember.id
+        }
+      })
     })
 
     // Note: Soft-deleted expenses keep their images in storage.

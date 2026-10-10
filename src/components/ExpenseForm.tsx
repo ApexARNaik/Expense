@@ -17,6 +17,7 @@ type ExpenseData = {
   participantIds: string[]
   idempotencyKey?: string
   imageUrl?: string | null
+  isRecurring?: boolean
 }
 
 const EXPENSE_CATEGORIES = ['Groceries', 'Food and Dining', 'Rent', 'Utilities', 'Household', 'Internet', 'Furniture', 'Other']
@@ -64,6 +65,7 @@ export default function ExpenseForm({ initialData, members, currentMemberId }: {
     (initialMode === 'settle' ? 'Settlement' : initialMode === 'income' ? 'Guest Food / Meals' : '')
   )
   const [note, setNote] = useState(initialData?.note || '')
+  const [isRecurring, setIsRecurring] = useState(initialData?.isRecurring || false)
   const [imageUrl, setImageUrl] = useState(initialData?.imageUrl || null)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [uploadError, setUploadError] = useState('')
@@ -238,6 +240,7 @@ export default function ExpenseForm({ initialData, members, currentMemberId }: {
       note: note.trim() || undefined,
       imageUrl: finalImageUrl,
       participantIds: activeParticipants,
+      isRecurring: mode === 'expense' ? isRecurring : false,
       idempotencyKey: initialData ? undefined : idempotencyKey
     }
 
@@ -492,6 +495,22 @@ export default function ExpenseForm({ initialData, members, currentMemberId }: {
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Recurring Expense Toggle */}
+      {!isIncome && !isSettle && !initialData && (
+        <div className="flex items-center gap-2">
+          <input 
+            type="checkbox" 
+            id="isRecurring" 
+            checked={isRecurring} 
+            onChange={(e) => setIsRecurring(e.target.checked)}
+            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+          />
+          <label htmlFor="isRecurring" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Make this a monthly recurring expense
+          </label>
         </div>
       )}
 

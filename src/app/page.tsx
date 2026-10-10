@@ -21,6 +21,11 @@ export default async function HomePage() {
         <header className="flex justify-between items-center mb-6 px-2">
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">Flat Expense Tracker</h1>
           <div className="flex items-center gap-4">
+            {currentMember.name === 'Atul' && (
+              <a href="/activity" className="text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors">
+                Activity
+              </a>
+            )}
             <ThemeToggle />
             <form action="/api/logout" method="POST">
               <button type="submit" className="text-sm font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
